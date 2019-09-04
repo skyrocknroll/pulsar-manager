@@ -17,6 +17,7 @@ import com.google.common.collect.Maps;
 import io.streamnative.pulsar.manager.PulsarManagerApplication;
 import io.streamnative.pulsar.manager.profiles.SqliteDBTestProfile;
 import io.streamnative.pulsar.manager.utils.HttpUtil;
+import org.apache.commons.lang3.StringUtils;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -26,6 +27,7 @@ import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
 import org.powermock.modules.junit4.PowerMockRunnerDelegate;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.junit4.SpringRunner;
@@ -48,6 +50,9 @@ import java.util.Map;
 @ActiveProfiles("test")
 public class TenantsServiceImplTest {
 
+    @Value("${backend.jwt.token}")
+    private String pulsarJwtToken;
+
     @Autowired
     private TenantsService tenantsService;
 
@@ -56,6 +61,9 @@ public class TenantsServiceImplTest {
         PowerMockito.mockStatic(HttpUtil.class);
         Map<String, String> header = Maps.newHashMap();
         header.put("Content-Type", "application/json");
+            if (!StringUtils.isBlank(pulsarJwtToken)) {
+                header.put("Authorization", String.format("Bearer %s", pulsarJwtToken));
+            }
         PowerMockito.when(HttpUtil.doGet("http://localhost:8080/admin/v2/tenants", header)).thenReturn("[\"public\"]");
         PowerMockito.when(HttpUtil.doGet("http://localhost:8080/admin/v2/tenants/public", header))
                 .thenReturn("{\"adminRoles\": [\"admin\"], \"allowedClusters\": [\"standalone\"]}");

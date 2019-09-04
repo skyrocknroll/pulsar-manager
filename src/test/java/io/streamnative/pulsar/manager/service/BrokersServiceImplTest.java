@@ -2,9 +2,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -18,7 +18,10 @@ import io.streamnative.pulsar.manager.PulsarManagerApplication;
 import io.streamnative.pulsar.manager.entity.EnvironmentEntity;
 import io.streamnative.pulsar.manager.profiles.SqliteDBTestProfile;
 import io.streamnative.pulsar.manager.utils.HttpUtil;
+
 import java.util.Map;
+
+import org.apache.commons.lang3.StringUtils;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -28,19 +31,20 @@ import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
 import org.powermock.modules.junit4.PowerMockRunnerDelegate;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.junit4.SpringRunner;
 
 @RunWith(PowerMockRunner.class)
 @PowerMockRunnerDelegate(SpringRunner.class)
-@PowerMockIgnore( {"javax.management.*", "javax.net.ssl.*"})
+@PowerMockIgnore({"javax.management.*", "javax.net.ssl.*"})
 @PrepareForTest(HttpUtil.class)
 @SpringBootTest(
-    classes = {
-        PulsarManagerApplication.class,
-        SqliteDBTestProfile.class
-    }
+        classes = {
+                PulsarManagerApplication.class,
+                SqliteDBTestProfile.class
+        }
 )
 @ActiveProfiles("test")
 public class BrokersServiceImplTest {
@@ -48,11 +52,18 @@ public class BrokersServiceImplTest {
     @Autowired
     private BrokersService brokersService;
 
+    @Value("${backend.jwt.token}")
+    private String pulsarJwtToken;
+
+
     @Test
-    public void brokersServiceTest() throws Exception{
+    public void brokersServiceTest() throws Exception {
         PowerMockito.mockStatic(HttpUtil.class);
         Map<String, String> header = Maps.newHashMap();
         header.put("Content-Type", "application/json");
+        if (!StringUtils.isBlank(pulsarJwtToken)) {
+            header.put("Authorization", String.format("Bearer %s", pulsarJwtToken));
+        }
         PowerMockito.when(HttpUtil.doGet("http://localhost:8080/admin/v2/clusters/standalone/failureDomains", header))
                 .thenReturn("{\"test\":{\"brokers\":[\"tengdeMBP:8080\"]}}");
 

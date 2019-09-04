@@ -2,9 +2,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -22,6 +22,7 @@ import io.streamnative.pulsar.manager.entity.EnvironmentEntity;
 import io.streamnative.pulsar.manager.entity.EnvironmentsRepository;
 import io.streamnative.pulsar.manager.service.EnvironmentCacheService;
 import io.streamnative.pulsar.manager.utils.HttpUtil;
+
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -29,10 +30,12 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import javax.servlet.http.HttpServletRequest;
+
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.pulsar.common.policies.data.ClusterData;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
@@ -45,6 +48,9 @@ public class EnvironmentCacheServiceImpl implements EnvironmentCacheService {
 
     @Autowired
     private EnvironmentsRepository environmentsRepository;
+
+    @Value("${backend.jwt.token}")
+    private String pulsarJwtToken;
 
     private final Map<String, Map<String, ClusterData>> environments;
 
@@ -92,7 +98,7 @@ public class EnvironmentCacheServiceImpl implements EnvironmentCacheService {
         if (null == clusterData) {
             // no environment and no cluster
             throw new RuntimeException(
-                "No cluster '" + cluster + "' found in environment '" + environment + "'");
+                    "No cluster '" + cluster + "' found in environment '" + environment + "'");
         }
         return clusterData.getServiceUrl();
     }
@@ -100,12 +106,15 @@ public class EnvironmentCacheServiceImpl implements EnvironmentCacheService {
     private Map<String, String> jsonHeader() {
         Map<String, String> header = Maps.newHashMap();
         header.put("Content-Type", "application/json");
+        if (!StringUtils.isBlank(pulsarJwtToken)) {
+            header.put("Authorization", String.format("Bearer %s", pulsarJwtToken));
+        }
         return header;
     }
 
     @Scheduled(
-        initialDelay = 0L,
-        fixedDelayString = "${cluster.cache.reload.interval.ms}")
+            initialDelay = 0L,
+            fixedDelayString = "${cluster.cache.reload.interval.ms}")
     @Override
     public void reloadEnvironments() {
         int pageNum = 0;
@@ -140,16 +149,17 @@ public class EnvironmentCacheServiceImpl implements EnvironmentCacheService {
     public void reloadEnvironment(EnvironmentEntity environment) {
         Gson gson = new Gson();
         String result = HttpUtil.doGet(
-            environment.getBroker() + "/admin/v2/clusters",
-            jsonHeader()
+                environment.getBroker() + "/admin/v2/clusters",
+                jsonHeader()
         );
         List<String> clustersList =
-            gson.fromJson(result, new TypeToken<List<String>>(){}.getType());
+                gson.fromJson(result, new TypeToken<List<String>>() {
+                }.getType());
         log.info("Reload cluster list for environment {} : {}", environment.getName(), clustersList);
         Set<String> newClusters = Sets.newHashSet(clustersList);
         Map<String, ClusterData> clusterDataMap = environments.computeIfAbsent(
-            environment.getName(),
-            (e) -> new ConcurrentHashMap<>());
+                environment.getName(),
+                (e) -> new ConcurrentHashMap<>());
         Set<String> oldClusters = clusterDataMap.keySet();
         Set<String> goneClusters = Sets.difference(oldClusters, newClusters);
         for (String cluster : goneClusters) {
@@ -164,32 +174,32 @@ public class EnvironmentCacheServiceImpl implements EnvironmentCacheService {
     private ClusterData reloadCluster(String environment, String cluster) {
         // if there is no clusters, lookup the clusters
         return environmentsRepository.findByName(environment).map(env ->
-            reloadCluster(env, cluster)
+                reloadCluster(env, cluster)
         ).orElse(null);
     }
 
     private ClusterData reloadCluster(EnvironmentEntity environment, String cluster) {
         log.info("Reloading cluster data for cluster {} @ environment {} ...",
-            cluster, environment.getName());
+                cluster, environment.getName());
         Gson gson = new Gson();
         String clusterInfoUrl = environment.getBroker() + "/admin/v2/clusters/" + cluster;
         String result = HttpUtil.doGet(
-            clusterInfoUrl,
-            jsonHeader()
+                clusterInfoUrl,
+                jsonHeader()
         );
         if (null == result) {
             // fail to fetch the cluster data or the cluster is not found
             return null;
         }
         log.info("Loaded cluster data for cluster {} @ environment {} from {} : {}",
-            cluster, environment.getName(), clusterInfoUrl, result);
+                cluster, environment.getName(), clusterInfoUrl, result);
         ClusterData clusterData = gson.fromJson(result, ClusterData.class);
         Map<String, ClusterData> clusters = environments.computeIfAbsent(
-            environment.getName(),
-            (e) -> new ConcurrentHashMap<>());
+                environment.getName(),
+                (e) -> new ConcurrentHashMap<>());
         clusters.put(cluster, clusterData);
         log.info("Successfully loaded cluster data for cluster {} @ environment {} : {}",
-            cluster, environment.getName(), clusterData);
+                cluster, environment.getName(), clusterData);
         return clusterData;
     }
 

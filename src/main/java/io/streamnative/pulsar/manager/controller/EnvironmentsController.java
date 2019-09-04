@@ -2,9 +2,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -24,8 +24,10 @@ import io.swagger.annotations.ApiOperation;
 import io.swagger.annotations.ApiParam;
 import io.swagger.annotations.ApiResponse;
 import io.swagger.annotations.ApiResponses;
+import org.apache.commons.lang3.StringUtils;
 import org.hibernate.validator.constraints.Range;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -50,6 +52,9 @@ public class EnvironmentsController {
     @Autowired
     private EnvironmentsRepository environmentsRepository;
 
+    @Value("${backend.jwt.token}")
+    private String pulsarJwtToken;
+
     @Autowired
     private EnvironmentCacheService environmentCacheService;
 
@@ -58,16 +63,16 @@ public class EnvironmentsController {
             @ApiResponse(code = 200, message = "ok"),
             @ApiResponse(code = 500, message = "Internal server error")
     })
-    @RequestMapping(value = "/environments", method =  RequestMethod.GET)
+    @RequestMapping(value = "/environments", method = RequestMethod.GET)
     public ResponseEntity<Map<String, Object>> getEnvironmentsList(
             @ApiParam(value = "page_num", defaultValue = "1", example = "1")
             @RequestParam(name = "page_num", defaultValue = "1")
             @Min(value = 1, message = "page_num is incorrect, should be greater than 0.")
-            Integer pageNum,
+                    Integer pageNum,
             @ApiParam(value = "page_size", defaultValue = "10", example = "10")
-            @RequestParam(name="page_size", defaultValue = "10")
+            @RequestParam(name = "page_size", defaultValue = "10")
             @Range(min = 1, max = 1000, message = "page_size is incorrect, should be greater than 0 and less than 1000.")
-            Integer pageSize) {
+                    Integer pageSize) {
         Page<EnvironmentEntity> environmentEntityPage = environmentsRepository.getEnvironmentsList(pageNum, pageSize);
         Map<String, Object> result = Maps.newHashMap();
         result.put("total", environmentEntityPage.getTotal());
@@ -80,7 +85,7 @@ public class EnvironmentsController {
             @ApiResponse(code = 200, message = "ok"),
             @ApiResponse(code = 500, message = "Internal server error")
     })
-    @RequestMapping(value = "/environments/environment", method =  RequestMethod.PUT)
+    @RequestMapping(value = "/environments/environment", method = RequestMethod.PUT)
     public ResponseEntity<Map<String, Object>> addEnvironment(
             @RequestBody EnvironmentEntity environmentEntity) {
         Optional<EnvironmentEntity> environmentEntityBrokerOptional = environmentsRepository
@@ -102,6 +107,9 @@ public class EnvironmentsController {
         }
         Map<String, String> header = Maps.newHashMap();
         header.put("Content-Type", "application/json");
+        if (!StringUtils.isBlank(pulsarJwtToken)) {
+            header.put("Authorization", String.format("Bearer %s", pulsarJwtToken));
+        }
         String httpTestResult = HttpUtil.doGet(environmentEntity.getBroker() + "/metrics", header);
         if (httpTestResult == null) {
             result.put("error", "This environment is error. Please check it");
@@ -118,7 +126,7 @@ public class EnvironmentsController {
             @ApiResponse(code = 200, message = "ok"),
             @ApiResponse(code = 500, message = "Internal server error")
     })
-    @RequestMapping(value = "/environments/environment", method =  RequestMethod.POST)
+    @RequestMapping(value = "/environments/environment", method = RequestMethod.POST)
     public ResponseEntity<Map<String, Object>> updateEnvironment(@RequestBody EnvironmentEntity environmentEntity) {
         Optional<EnvironmentEntity> environmentEntityOptional = environmentsRepository
                 .findByName(environmentEntity.getName());
@@ -129,6 +137,9 @@ public class EnvironmentsController {
         }
         Map<String, String> header = Maps.newHashMap();
         header.put("Content-Type", "application/json");
+        if (!StringUtils.isBlank(pulsarJwtToken)) {
+            header.put("Authorization", String.format("Bearer %s", pulsarJwtToken));
+        }
         String httpTestResult = HttpUtil.doGet(environmentEntity.getBroker() + "/metrics", header);
         if (httpTestResult == null) {
             result.put("error", "This environment is error. Please check it");
@@ -145,7 +156,7 @@ public class EnvironmentsController {
             @ApiResponse(code = 200, message = "ok"),
             @ApiResponse(code = 500, message = "Internal server error")
     })
-    @RequestMapping(value = "/environments/environment", method =  RequestMethod.DELETE)
+    @RequestMapping(value = "/environments/environment", method = RequestMethod.DELETE)
     public ResponseEntity<Map<String, Object>> deleteEnvironment(@RequestBody EnvironmentEntity environmentEntity) {
         Optional<EnvironmentEntity> environmentEntityOptional = environmentsRepository
                 .findByName(environmentEntity.getName());

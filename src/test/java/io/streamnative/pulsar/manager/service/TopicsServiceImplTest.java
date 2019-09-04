@@ -2,9 +2,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -17,6 +17,7 @@ import com.google.common.collect.Maps;
 import io.streamnative.pulsar.manager.PulsarManagerApplication;
 import io.streamnative.pulsar.manager.profiles.SqliteDBTestProfile;
 import io.streamnative.pulsar.manager.utils.HttpUtil;
+import org.apache.commons.lang3.StringUtils;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -26,6 +27,7 @@ import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
 import org.powermock.modules.junit4.PowerMockRunnerDelegate;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.junit4.SpringRunner;
@@ -36,19 +38,21 @@ import java.util.Map;
 
 @RunWith(PowerMockRunner.class)
 @PowerMockRunnerDelegate(SpringRunner.class)
-@PowerMockIgnore( {"javax.management.*", "javax.net.ssl.*"})
+@PowerMockIgnore({"javax.management.*", "javax.net.ssl.*"})
 @PrepareForTest(HttpUtil.class)
 @SpringBootTest(
-    classes = {
-        PulsarManagerApplication.class,
-        SqliteDBTestProfile.class
-    }
+        classes = {
+                PulsarManagerApplication.class,
+                SqliteDBTestProfile.class
+        }
 )
 @ActiveProfiles("test")
 public class TopicsServiceImplTest {
 
     @Autowired
     private TopicsService topicsService;
+    @Value("${backend.jwt.token}")
+    private String pulsarJwtToken;
 
     @Autowired
     private BrokerStatsService brokerStatsService;
@@ -66,6 +70,9 @@ public class TopicsServiceImplTest {
         PowerMockito.mockStatic(HttpUtil.class);
         Map<String, String> header = Maps.newHashMap();
         header.put("Content-Type", "application/json");
+        if (!StringUtils.isBlank(pulsarJwtToken)) {
+            header.put("Authorization", String.format("Bearer %s", pulsarJwtToken));
+        }
         PowerMockito.when(HttpUtil.doGet("http://localhost:8080/admin/v2/persistent/public/default", header))
                 .thenReturn(topics);
         PowerMockito.when(HttpUtil.doGet(
@@ -87,6 +94,9 @@ public class TopicsServiceImplTest {
         PowerMockito.mockStatic(HttpUtil.class);
         Map<String, String> header = Maps.newHashMap();
         header.put("Content-Type", "application/json");
+        if (!StringUtils.isBlank(pulsarJwtToken)) {
+            header.put("Authorization", String.format("Bearer %s", pulsarJwtToken));
+        }
         PowerMockito.when(HttpUtil.doGet("http://localhost:8080/admin/v2/clusters", header))
                 .thenReturn("[\"standalone\"]");
 
@@ -105,10 +115,10 @@ public class TopicsServiceImplTest {
         String cluster = "standalone";
         String serviceUrl = "http://localhost:8080";
         brokerStatsService.collectStatsToDB(
-            System.currentTimeMillis() / 1000,
-            environment,
-            cluster,
-            serviceUrl
+                System.currentTimeMillis() / 1000,
+                environment,
+                cluster,
+                serviceUrl
         );
 
         List<Map<String, String>> topics = new ArrayList<>();
@@ -117,7 +127,7 @@ public class TopicsServiceImplTest {
         topic.put("partitions", "0");
         topics.add(topic);
 
-        List<Map<String, Object>> topicsList =  topicsService.getTopicsStatsList(
+        List<Map<String, Object>> topicsList = topicsService.getTopicsStatsList(
                 environment, "public", "functions", "persistent", topics);
         topicsList.forEach((t) -> {
             Assert.assertEquals(t.get("partitions"), 0);

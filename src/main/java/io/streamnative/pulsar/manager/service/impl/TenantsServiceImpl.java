@@ -2,9 +2,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -18,6 +18,7 @@ import com.google.common.reflect.TypeToken;
 import com.google.gson.Gson;
 import io.streamnative.pulsar.manager.service.TenantsService;
 import io.streamnative.pulsar.manager.utils.HttpUtil;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.pulsar.common.policies.data.TenantInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -37,6 +38,9 @@ public class TenantsServiceImpl implements TenantsService {
     @Value("${backend.directRequestBroker}")
     private boolean directRequestBroker;
 
+    @Value("${backend.jwt.token}")
+    private String pulsarJwtToken;
+
     public Map<String, Object> getTenantsList(Integer pageNum, Integer pageSize, String requestHost) {
         Map<String, Object> tenantsMap = Maps.newHashMap();
         List<Map<String, Object>> tenantsArray = new ArrayList<>();
@@ -44,19 +48,25 @@ public class TenantsServiceImpl implements TenantsService {
             Gson gson = new Gson();
             Map<String, String> header = Maps.newHashMap();
             header.put("Content-Type", "application/json");
-            String result = HttpUtil.doGet( requestHost + "/admin/v2/tenants", header);
+            if (!StringUtils.isBlank(pulsarJwtToken)) {
+                header.put("Authorization", String.format("Bearer %s", pulsarJwtToken));
+            }
+
+            String result = HttpUtil.doGet(requestHost + "/admin/v2/tenants", header);
             if (result != null) {
-                List<String> tenantsList = gson.fromJson(result, new TypeToken<List<String>>(){}.getType());
+                List<String> tenantsList = gson.fromJson(result, new TypeToken<List<String>>() {
+                }.getType());
                 for (String tenant : tenantsList) {
                     Map<String, Object> tenantEntity = Maps.newHashMap();
-                    String info = HttpUtil.doGet( requestHost + "/admin/v2/tenants/" + tenant, header);
+                    String info = HttpUtil.doGet(requestHost + "/admin/v2/tenants/" + tenant, header);
                     TenantInfo tenantInfo = gson.fromJson(info, TenantInfo.class);
                     tenantEntity.put("tenant", tenant);
                     tenantEntity.put("adminRoles", String.join(",", tenantInfo.getAdminRoles()));
-                    tenantEntity.put("allowedClusters", String.join(",",  tenantInfo.getAllowedClusters()));
+                    tenantEntity.put("allowedClusters", String.join(",", tenantInfo.getAllowedClusters()));
                     String namespace = HttpUtil.doGet(requestHost + "/admin/v2/namespaces/" + tenant, header);
                     if (namespace != null) {
-                        List<String> namespacesList = gson.fromJson(namespace, new TypeToken<List<String>>(){}.getType());
+                        List<String> namespacesList = gson.fromJson(namespace, new TypeToken<List<String>>() {
+                        }.getType());
                         tenantEntity.put("namespaces", namespacesList.size());
                     } else {
                         tenantEntity.put("namespaces", 0);
@@ -70,7 +80,7 @@ public class TenantsServiceImpl implements TenantsService {
                 tenantsMap.put("pageSize", tenantsList.size());
             }
         } else {
-           // to do query from local database
+            // to do query from local database
         }
         return tenantsMap;
     }

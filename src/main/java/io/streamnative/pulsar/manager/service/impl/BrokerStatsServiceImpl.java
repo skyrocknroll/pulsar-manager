@@ -2,9 +2,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -17,6 +17,7 @@ import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 
 import java.text.DecimalFormat;
+
 import io.streamnative.pulsar.manager.service.BrokerStatsService;
 import io.streamnative.pulsar.manager.service.BrokersService;
 import io.streamnative.pulsar.manager.service.ClustersService;
@@ -35,9 +36,12 @@ import io.streamnative.pulsar.manager.entity.SubscriptionStatsEntity;
 import io.streamnative.pulsar.manager.entity.SubscriptionsStatsRepository;
 import io.streamnative.pulsar.manager.entity.TopicStatsEntity;
 import io.streamnative.pulsar.manager.entity.TopicsStatsRepository;
+
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -63,6 +67,9 @@ public class BrokerStatsServiceImpl implements BrokerStatsService {
 
     @Value("${clear.stats.interval}")
     private Long clearStatsInterval;
+
+    @Value("${backend.jwt.token}")
+    private String pulsarJwtToken;
 
     @Autowired
     private EnvironmentsRepository environmentsRepository;
@@ -91,19 +98,23 @@ public class BrokerStatsServiceImpl implements BrokerStatsService {
     @Autowired
     private EnvironmentCacheService environmentCache;
 
-    private static final Map<String, String> header = new HashMap<String, String>(){{
-        put("Content-Type","application/json");
+    private static final Map<String, String> header = new HashMap<String, String>() {{
+        put("Content-Type", "application/json");
     }};
+
+
 
     public String forwarBrokerStatsMetrics(String broker, String requestHost) {
 
         broker = checkServiceUrl(broker, requestHost);
+        header.put("Authorization", String.format("Bearer %s", pulsarJwtToken));
         return HttpUtil.doGet(broker + "/admin/v2/broker-stats/metrics", header);
     }
 
     public String forwardBrokerStatsTopics(String broker, String requestHost) {
 
         broker = checkServiceUrl(broker, requestHost);
+        header.put("Authorization", String.format("Bearer %s", pulsarJwtToken));
         return HttpUtil.doGet(broker + "/admin/v2/broker-stats/topics", header);
     }
 
@@ -115,7 +126,7 @@ public class BrokerStatsServiceImpl implements BrokerStatsService {
         for (EnvironmentEntity env : environmentEntities) {
             String serviceUrl = checkServiceUrl(null, env.getBroker());
             Map<String, Object> clusterObject =
-                clustersService.getClustersList(0, 0, serviceUrl, (c) -> serviceUrl);
+                    clustersService.getClustersList(0, 0, serviceUrl, (c) -> serviceUrl);
             List<HashMap<String, Object>> clusterLists = (List<HashMap<String, Object>>) clusterObject.get("data");
             clusterLists.forEach((clusterMap) -> {
                 String cluster = (String) clusterMap.get("cluster");
@@ -125,7 +136,7 @@ public class BrokerStatsServiceImpl implements BrokerStatsService {
         }
         collectStatsServiceUrls.forEach((envCluster, serviceUrl) -> {
             log.info("Start collecting stats from env {} / cluster {} @ {}",
-                envCluster.getLeft(), envCluster.getRight(), serviceUrl);
+                    envCluster.getLeft(), envCluster.getRight(), serviceUrl);
             collectStatsToDB(unixTime, envCluster.getLeft(), envCluster.getRight(), serviceUrl);
         });
 
@@ -140,11 +151,12 @@ public class BrokerStatsServiceImpl implements BrokerStatsService {
             String tempBroker = (String) brokerMap.get("broker");
             // TODO: handle other protocols
             String broker = "http://" + tempBroker;
+            header.put("Authorization", String.format("Bearer %s", pulsarJwtToken));
             String result = HttpUtil.doGet(broker + "/admin/v2/broker-stats/topics", header);
             Gson gson = new Gson();
             HashMap<String, HashMap<String, HashMap<String, HashMap<String, PulsarManagerTopicStats>>>> brokerStatsTopicEntity = gson.fromJson(result,
-                new TypeToken<HashMap<String, HashMap<String, HashMap<String, HashMap<String, PulsarManagerTopicStats>>>>>() {
-                }.getType());
+                    new TypeToken<HashMap<String, HashMap<String, HashMap<String, HashMap<String, PulsarManagerTopicStats>>>>>() {
+                    }.getType());
             brokerStatsTopicEntity.forEach((namespace, namespaceStats) -> {
                 namespaceStats.forEach((bundle, bundleStats) -> {
                     bundleStats.forEach((persistent, persistentStats) -> {
@@ -179,9 +191,9 @@ public class BrokerStatsServiceImpl implements BrokerStatsService {
                                     subscriptionStatsEntity.setMsgThroughputOut(Double.parseDouble(df.format(subscriptionStats.getMsgThroughputOut())));
                                     subscriptionStatsEntity.setMsgRateRedeliver(Double.parseDouble(df.format(subscriptionStats.getMsgRateRedeliver())));
                                     subscriptionStatsEntity.setNumberOfEntriesSinceFirstNotAckedMessage(
-                                        subscriptionStats.getNumberOfEntriesSinceFirstNotAckedMessage());
+                                            subscriptionStats.getNumberOfEntriesSinceFirstNotAckedMessage());
                                     subscriptionStatsEntity.setTotalNonContiguousDeletedMessagesRange(
-                                        subscriptionStats.getTotalNonContiguousDeletedMessagesRange());
+                                            subscriptionStats.getTotalNonContiguousDeletedMessagesRange());
                                     subscriptionStatsEntity.setMsgBacklog(subscriptionStats.getMsgBacklog());
                                     subscriptionStatsEntity.setSubscriptionType(String.valueOf(subscriptionStats.getType()));
                                     subscriptionStatsEntity.setMsgRateExpired(Double.parseDouble(df.format(subscriptionStats.getMsgRateExpired())));

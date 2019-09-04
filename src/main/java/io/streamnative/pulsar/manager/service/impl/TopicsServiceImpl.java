@@ -2,9 +2,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -22,6 +22,7 @@ import io.streamnative.pulsar.manager.entity.TopicStatsEntity.TopicStatsSummary;
 import io.streamnative.pulsar.manager.entity.TopicsStatsRepository;
 import io.streamnative.pulsar.manager.service.TopicsService;
 import io.streamnative.pulsar.manager.utils.HttpUtil;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -38,6 +39,8 @@ public class TopicsServiceImpl implements TopicsService {
 
     @Value("${backend.directRequestBroker}")
     private boolean directRequestBroker;
+    @Value("${backend.jwt.token}")
+    private String pulsarJwtToken;
 
     @Autowired
     private TopicsStatsRepository topicsStatsRepository;
@@ -90,7 +93,7 @@ public class TopicsServiceImpl implements TopicsService {
             return topicsArray;
         }
         List<String> topicList = new ArrayList<>();
-        for (Map<String, String> topic: topics) {
+        for (Map<String, String> topic : topics) {
             String topicName = topic.get("topic");
             int partitions = Integer.parseInt(topic.get("partitions"));
             if (partitions > 0) {
@@ -112,10 +115,10 @@ public class TopicsServiceImpl implements TopicsService {
                     0, (int) topicCountPage.getTotal(), env, tenant, namespace, persistent, topicList, topicStats.getTimestamp());
             topicStatsEntities.getResult().forEach((t) -> {
                 tempTopicsMap.computeIfAbsent(t.getTopic(), (ignored) -> new HashMap<>())
-                    .put(t.getCluster(), t);
+                        .put(t.getCluster(), t);
             });
         }
-        for (Map<String, String> topic: topics) {
+        for (Map<String, String> topic : topics) {
             String topicName = topic.get("topic");
             Map<String, Object> topicEntity = Maps.newHashMap();
             int partitions = Integer.parseInt(topic.get("partitions"));
@@ -131,7 +134,7 @@ public class TopicsServiceImpl implements TopicsService {
                             totalStats = totalStats.add(clusterSummary);
 
                             TopicStatsSummary clusterTotalStats =
-                                clusterSummaries.computeIfAbsent(cluster.getKey(), (ignored) -> new TopicStatsSummary());
+                                    clusterSummaries.computeIfAbsent(cluster.getKey(), (ignored) -> new TopicStatsSummary());
                             clusterTotalStats = clusterTotalStats.add(clusterSummary);
                             clusterSummaries.put(cluster.getKey(), clusterTotalStats);
                         }
@@ -193,6 +196,9 @@ public class TopicsServiceImpl implements TopicsService {
         List<Map<String, String>> topicsArray = new ArrayList<>();
         Map<String, String> header = Maps.newHashMap();
         header.put("Content-Type", "application/json");
+        if (!StringUtils.isBlank(pulsarJwtToken)) {
+            header.put("Authorization", String.format("Bearer %s", pulsarJwtToken));
+        }
         String prefix = "/admin/v2/" + persistent + "/" + tenant + "/" + namespace;
         Gson gson = new Gson();
         String partitonedUrl = requestHost + prefix + "/partitioned";
@@ -201,7 +207,8 @@ public class TopicsServiceImpl implements TopicsService {
         Map<String, List<String>> partitionedMap = Maps.newHashMap();
         if (partitonedTopic != null) {
             partitionedTopicsList = gson.fromJson(
-                    partitonedTopic, new TypeToken<List<String>>(){}.getType());
+                    partitonedTopic, new TypeToken<List<String>>() {
+                    }.getType());
             for (String p : partitionedTopicsList) {
                 if (p.startsWith(persistent)) {
                     partitionedMap.put(this.getTopicName(p), new ArrayList<>());
@@ -213,8 +220,9 @@ public class TopicsServiceImpl implements TopicsService {
         String topics = HttpUtil.doGet(topicUrl, header);
         if (topics != null) {
             List<String> topicsList = gson.fromJson(
-                    topics, new TypeToken<List<String>>(){}.getType());
-            for (String topic: topicsList) {
+                    topics, new TypeToken<List<String>>() {
+                    }.getType());
+            for (String topic : topicsList) {
                 if (topic.startsWith(persistent)) {
                     String topicName = this.getTopicName(topic);
                     Map<String, String> topicEntity = Maps.newHashMap();
@@ -244,7 +252,8 @@ public class TopicsServiceImpl implements TopicsService {
                     String metadataTopicUrl = requestHost + prefix + "/" + topicName + "/partitions";
                     String metadataTopic = HttpUtil.doGet(metadataTopicUrl, header);
                     Map<String, Integer> metadata = gson.fromJson(
-                            metadataTopic, new TypeToken<Map<String, Integer>>(){}.getType());
+                            metadataTopic, new TypeToken<Map<String, Integer>>() {
+                            }.getType());
                     topicEntity.put("partitions", String.valueOf(metadata.get("partitions")));
                     topicEntity.put("persistent", persistent);
                 }
