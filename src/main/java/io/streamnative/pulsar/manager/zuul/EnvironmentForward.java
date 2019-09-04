@@ -2,9 +2,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -20,6 +20,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cloud.netflix.zuul.filters.support.FilterConstants;
 import org.springframework.stereotype.Component;
 
@@ -37,7 +38,8 @@ import static org.springframework.cloud.netflix.zuul.filters.support.FilterConst
 public class EnvironmentForward extends ZuulFilter {
 
     private static final Logger log = LoggerFactory.getLogger(EnvironmentForward.class);
-
+    @Value("${backend.jwt.token}")
+    private String pulsarJwtToken;
     @Autowired
     private EnvironmentCacheService environmentCacheService;
 
@@ -75,6 +77,7 @@ public class EnvironmentForward extends ZuulFilter {
         if (StringUtils.isNotBlank(broker)) { // the request should be forward to a pulsar broker
             // TODO: support https://
             String serviceUrl = "http://" + broker;
+            log.info(serviceUrl);
             return forwardRequest(ctx, request, serviceUrl);
         }
 
@@ -88,13 +91,15 @@ public class EnvironmentForward extends ZuulFilter {
 
     private Object forwardRequest(RequestContext ctx, HttpServletRequest request, String serviceUrl) {
         ctx.put(REQUEST_URI_KEY, request.getRequestURI());
+
+        ctx.addZuulRequestHeader("Authorization", String.format("Bearer %s",pulsarJwtToken));
         try {
             ctx.setRouteHost(new URL(serviceUrl));
             log.info("Forward request to {} @ path {}",
-                serviceUrl, request.getRequestURI());
+                    serviceUrl, request.getRequestURI());
         } catch (MalformedURLException e) {
             log.error("Route forward to {} path {} error: {}",
-                serviceUrl, request.getRequestURI(), e.getMessage());
+                    serviceUrl, request.getRequestURI(), e.getMessage());
         }
         return null;
     }

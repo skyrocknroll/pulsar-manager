@@ -24,6 +24,7 @@ import lombok.Setter;
 @Setter
 @NoArgsConstructor
 public class EnvironmentEntity {
+
     private String name;
     private String broker;
 }

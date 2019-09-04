@@ -20,36 +20,36 @@ import org.apache.ibatis.annotations.*;
 @Mapper
 public interface ConsumerStatsMapper {
 
-    @Insert("INSERT INTO consumersStats(consumer,topicStatsId,replicationStatsId,subscriptionStatsId,address," +
-            "availablePermits,connectedSince,msgRateOut,msgThroughputOut,msgRateRedeliver," +
-            "clientVersion,timestamp,metadata) " +
+        @Insert("INSERT INTO \"consumersStats\"(consumer,\"topicStatsId\",\"replicationStatsId\",\"subscriptionStatsId\",address," +
+            "\"availablePermits\",\"connectedSince\",\"msgRateOut\",\"msgThroughputOut\",\"msgRateRedeliver\"," +
+            "\"clientVersion\",timestamp,metadata) " +
             "VALUES(#{consumer},#{topicStatsId},#{replicationStatsId},#{subscriptionStatsId},#{address}," +
             "#{availablePermits},#{connectedSince},#{msgRateOut},#{msgThroughputOut},#{msgRateRedeliver}," +
             "#{clientVersion},#{timestamp},#{metadata})")
     @Options(useGeneratedKeys=true, keyProperty="consumerStatsId", keyColumn="consumerStatsId")
     void save(ConsumerStatsEntity consumerStatsEntity);
 
-    @Select("SELECT consumerStatsId,consumer,topicStatsId,replicationStatsId,subscriptionStatsId,address," +
-            "availablePermits,connectedSince,msgRateOut,msgThroughputOut,msgRateRedeliver," +
-            "clientVersion,timestamp,metadata FROM consumersStats " +
-            "where topicStatsId=#{topicStatsId} and timestamp=#{timestamp}")
+    @Select("SELECT \"consumerStatsId\",consumer,\"topicStatsId\",\"replicationStatsId\",\"subscriptionStatsId\",address," +
+            "\"availablePermits\",\"connectedSince\",\"msgRateOut\",\"msgThroughputOut\",\"msgRateRedeliver\"," +
+            "\"clientVersion\",\"timestamp\",metadata FROM \"consumersStats\" " +
+            "where \"topicStatsId\"=#{topicStatsId} and timestamp=#{timestamp}")
     Page<ConsumerStatsEntity> findByTopicStatsId(@Param("topicStatsId") long topicStatsId,
                                                  @Param("timestamp") long timestamp);
 
-    @Select("SELECT consumerStatsId,consumer,topicStatsId,replicationStatsId,subscriptionStatsId,address," +
-            "availablePermits,connectedSince,msgRateOut,msgThroughputOut,msgRateRedeliver," +
-            "clientVersion,timestamp,metadata FROM consumersStats " +
-            "where subscriptionStatsId=#{subscriptionStatsId} and timestamp=#{timestamp}")
+    @Select("SELECT \"consumerStatsId\",consumer,\"topicStatsId\",\"replicationStatsId\",\"subscriptionStatsId\",address," +
+            "availablePermits,\"connectedSince\",\"msgRateOut\",\"msgThroughputOut\",\"msgRateRedeliver\"," +
+            "\"clientVersion\",\"timestamp\",metadata FROM \"consumersStats\" " +
+            "where \"subscriptionStatsId\"=#{subscriptionStatsId} and timestamp=#{timestamp}")
     Page<ConsumerStatsEntity> findBySubscriptionStatsId(@Param("subscriptionStatsId") long subscriptionStatsId,
                                                         @Param("timestamp") long timestamp);
 
-    @Select("SELECT consumerStatsId,consumer,topicStatsId,replicationStatsId,subscriptionStatsId,address," +
-            "availablePermits,connectedSince,msgRateOut,msgThroughputOut,msgRateRedeliver," +
-            "clientVersion,timestamp,metadata FROM consumersStats " +
-            "where replicationStatsId=#{replicationStatsId} and timestamp=#{timestamp}")
+    @Select("SELECT \"consumerStatsId\",consumer,\"topicStatsId\",\"replicationStatsId\",\"subscriptionStatsId\",address," +
+            "\"availablePermits\",\"connectedSince\",\"msgRateOut\",\"msgThroughputOut\",\"msgRateRedeliver\"," +
+            "\"clientVersion\",timestamp,metadata FROM \"consumersStats\" " +
+            "where \"replicationStatsId\"=#{replicationStatsId} and timestamp=#{timestamp}")
     Page<ConsumerStatsEntity> findByReplicationStatsId(@Param("replicationStatsId") long replicationStatsId,
                                                        @Param("timestamp") long timestamp);
 
-    @Delete("DELETE FROM consumersStats WHERE #{nowTime} - #{timeInterval} >= timestamp")
+    @Delete("DELETE FROM \"consumersStats\" WHERE #{nowTime} - #{timeInterval} >= timestamp")
     void delete(@Param("nowTime") long nowTime, @Param("timeInterval") long timeInterval);
 }

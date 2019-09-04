@@ -20,9 +20,9 @@ import org.apache.ibatis.annotations.*;
 @Mapper
 public interface ReplicationsStatsMapper {
 
-    @Insert("INSERT INTO replicationsStats(topicStatsId,cluster,connected,msgRateIn,msgRateOut,msgThroughputIn," +
-            "msgThroughputOut,replicationBacklog,replicationDelayInSeconds,inboundConnection," +
-            "inboundConnectedSince,outboundConnection,outboundConnectedSince,timestamp,msgRateExpired) " +
+    @Insert("INSERT INTO \"replicationsStats\"(\"topicStatsId\",\"cluster\",\"connected\",\"msgRateIn\",\"msgRateOut\",\"msgThroughputIn\"," +
+            "\"msgThroughputOut\",\"replicationBacklog\",\"replicationDelayInSeconds\",\"inboundConnection\"," +
+            "\"inboundConnectedSince\",\"outboundConnection\",\"outboundConnectedSince\",timestamp,\"msgRateExpired\") " +
             "VALUES(#{topicStatsId},#{cluster},#{connected},#{msgRateIn},#{msgRateOut},#{msgThroughputIn}," +
             "#{msgThroughputOut},#{replicationBacklog},#{replicationDelayInSeconds}," +
             "#{inboundConnection},#{inboundConnectedSince},#{outboundConnection},#{outboundConnectedSince}," +
@@ -30,13 +30,13 @@ public interface ReplicationsStatsMapper {
     @Options(useGeneratedKeys=true, keyProperty="replicationStatsId", keyColumn="replicationStatsId")
     void save(ReplicationStatsEntity replicationStatsEntity);
 
-    @Select("SELECT replicationStatsId,topicStatsId,cluster,connected,msgRateIn,msgRateOut,msgThroughputIn,msgThroughputOut," +
-            "replicationBacklog,replicationDelayInSeconds,inboundConnection,inboundConnectedSince," +
-            "outboundConnection,outboundConnectedSince,timestamp,msgRateExpired FROM replicationsStats " +
-            "where topicStatsId=#{topicStatsId} and timestamp=#{timestamp}")
+    @Select("SELECT \"replicationStatsId\",\"topicStatsId\",cluster,connected,\"msgRateIn\",\"msgRateOut\",\"msgThroughputIn\",\"msgThroughputOut\"," +
+            "\"replicationBacklog\",\"replicationDelayInSeconds\",\"inboundConnection\",\"inboundConnectedSince\"," +
+            "\"outboundConnection\",\"outboundConnectedSince\",timestamp,\"msgRateExpired\" FROM \"replicationsStats\" " +
+            "where \"topicStatsId\"=#{topicStatsId} and timestamp=#{timestamp}")
     Page<ReplicationStatsEntity> findByTopicStatsId(@Param("topicStatsId") long topicStatsId,
                                                     @Param("timestamp") long timestamp);
 
-    @Delete("DELETE FROM replicationsStats WHERE #{nowTime} - #{timeInterval} >= timestamp")
+    @Delete("DELETE FROM \"replicationsStats\" WHERE #{nowTime} - #{timeInterval} >= timestamp")
     void delete(@Param("nowTime") long nowTime, @Param("timeInterval") long timeInterval);
 }

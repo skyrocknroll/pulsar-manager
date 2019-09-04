@@ -78,6 +78,10 @@ public class HttpUtil {
                 response.close();
                 return strResult;
             } else {
+                log.error(request.getRequestLine().getMethod(),request.getURI());
+                log.error(request.getRequestLine().toString());
+                log.error(String.valueOf(response.getStatusLine().getStatusCode()));
+                log.error(String.valueOf(EntityUtils.toString(response.getEntity())));
                 request.abort();
             }
         } catch (Throwable cause) {
