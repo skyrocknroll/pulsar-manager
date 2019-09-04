@@ -92,7 +92,7 @@ public class EnvironmentForward extends ZuulFilter {
     private Object forwardRequest(RequestContext ctx, HttpServletRequest request, String serviceUrl) {
         ctx.put(REQUEST_URI_KEY, request.getRequestURI());
 
-        ctx.addZuulRequestHeader("Authorization", String.format("Bearer %s",pulsarJwtToken));
+//        ctx.addZuulRequestHeader("Authorization", String.format("Bearer %s",pulsarJwtToken));
         try {
             ctx.setRouteHost(new URL(serviceUrl));
             log.info("Forward request to {} @ path {}",
